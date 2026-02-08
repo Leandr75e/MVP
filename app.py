@@ -6,42 +6,49 @@ import re
 import io # Nécessaire pour le téléchargement Excel si on veut être propre
 
 
-st.set_page_config(page_title="Vermaz Portfolio", layout="wide")
+st.set_page_config(page_title="MVP Portfolio", layout="wide")
 
+# --- 🔒 GESTION DU MOT DE PASSE (DESIGN PRO) ---
 def check_password():
     """Renvoie True si l'utilisateur a le bon mot de passe."""
 
-    def password_entered():
-        """Vérifie si le mot de passe saisi correspond au secret."""
-        if st.session_state["password"] == st.secrets["password"]:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # On ne garde pas le mdp en mémoire
-        else:
-            st.session_state["password_correct"] = False
-
-    # 1. Si l'utilisateur est déjà connecté, on retourne True tout de suite
+    # 1. Si déjà connecté, on valide direct
     if st.session_state.get("password_correct", False):
         return True
 
-    # 2. Sinon, on affiche le champ de saisie
-    st.text_input(
-        "🔐 Mot de passe", 
-        type="password", 
-        on_change=password_entered, 
-        key="password"
-    )
-    
-    # 3. Gestion des erreurs
-    if "password_correct" in st.session_state:
-        st.error("❌ Mot de passe incorrect")
+    # 2. Mise en page de la page de connexion
+    # On crée 3 colonnes pour centrer le contenu au milieu (col_center)
+    col_left, col_center, col_right = st.columns([1, 2, 1])
+
+    with col_center:
+        st.write("") # Un peu d'espace en haut
+        st.write("")
         
+        # Titre et Logo (Tu peux mettre st.image("logo.png") si tu en as un)
+        st.markdown("<h1 style='text-align: center;'>🔐 MVP Portfolio</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center;'>Espace réservé aux investisseurs</p>", unsafe_allow_html=True)
+        st.divider()
+
+        # Formulaire de connexion
+        with st.form("login_form"):
+            st.write("##### Veuillez vous identifier")
+            password = st.text_input("🔐 Mot de passe", type="password", placeholder="Entrez votre clé d'accès")
+            
+            # Bouton large
+            submit_button = st.form_submit_button("Se connecter", use_container_width=True)
+
+            if submit_button:
+                if password == st.secrets["password"]:
+                    st.session_state["password_correct"] = True
+                    st.rerun()  # On recharge la page pour afficher le dashboard immédiatement
+                else:
+                    st.error("❌ Mot de passe incorrect. Réessayez.")
+    
+    # Tant que ce n'est pas validé, on renvoie False
     return False
 
-# Si le mot de passe n'est pas bon, on arrête tout ici !
 if not check_password():
     st.stop()
-
-# --- FIN DU VERROUILLAGE ---
 
 
 # 2. Définition des fonctions (On ne change rien ici)
@@ -485,7 +492,6 @@ if df_evo is not None and not df_evo.empty:
     
     # Comparaison (Êtes-vous plus safe que le marché ?)
     risk_diff = mdd_portfolio - mdd_btc 
-    # Si Vermaz = -10% et BTC = -30%, risk_diff = +20% (C'est bon, donc vert)
     
     c_risk3.metric(
         "Protection vs BTC", 
@@ -493,8 +499,6 @@ if df_evo is not None and not df_evo.empty:
         help="Une valeur positive signifie que votre chute maximale a été moins violente que celle du Bitcoin."
     )
 
-    st.expander("📉 Voir le détail des zones de baisse (Underwater Plot)")
-                # On recalcule les drawdowns quotidiens pour le graphique
     df_plot['DD_Portfolio'] = (df_plot[col_vermaz] / df_plot[col_vermaz].cummax() - 1) * 100
     df_plot['DD_BTC'] = (df_plot[col_btc] / df_plot[col_btc].cummax() - 1) * 100        
     fig_dd = px.area(df_plot, x='Date', y=['DD_Portfolio', 'DD_BTC'],
